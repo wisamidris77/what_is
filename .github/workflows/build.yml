@@ -1,0 +1,139 @@
+name: Build and Release App
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # # ────────────────────────────────
+  # android:
+  #   name: Android APK Build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: "3.35.7"
+  #         channel: "stable"
+  #     - run: flutter pub get
+  #     - run: flutter build apk --release --no-tree-shake-icons
+      
+  #     # Rename the file so it matches what we want in the release
+  #     - name: Rename APK
+  #       run: mv build/app/outputs/flutter-apk/app-release.apk app-release.apk
+
+  #     - name: Upload APK
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: app-android
+  #         path: app-release.apk
+
+  # ────────────────────────────────
+  windows:
+    name: Windows Build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.7"
+          channel: "stable"
+      - run: flutter pub get
+      - run: flutter build windows --release
+
+      # NEW STEP: Compress the build folder into a ZIP file
+      - name: Compress Build
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath what-is-windows.zip
+
+      - name: Upload Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-windows
+          path: what-is-windows.zip
+
+  # # ────────────────────────────────
+  # macos:
+  #   name: macOS Build
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: "3.35.7"
+  #         channel: "stable"
+  #     - run: flutter pub get
+  #     - run: flutter build macos --release --no-tree-shake-icons
+
+  #     # NEW STEP: Zip the .app (which is actually a folder)
+  #     - name: Compress Build
+  #       # Navigate to the build folder and zip the .app
+  #       run: |
+  #         cd build/macos/Build/Products/Release
+  #         zip -r ../../../../what-is-macos.zip *.app
+
+  #     - name: Upload macOS
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: app-macos
+  #         path: what-is-macos.zip
+
+  # # ────────────────────────────────
+  # linux:
+  #   name: Linux Build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: "3.35.7"
+  #         channel: "stable"
+  #     - name: Install dependencies
+  #       run: |
+  #         sudo apt-get update -y
+  #         sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+  #     - run: flutter pub get
+  #     - run: flutter build linux --release --no-tree-shake-icons
+
+  #     # NEW STEP: Create a Tarball
+  #     - name: Compress Build
+  #       run: tar -czf what-is-linux.tar.gz -C build/linux/x64/release/bundle .
+
+  #     - name: Upload Linux
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: app-linux
+  #         path: what-is-linux.tar.gz
+
+  # ────────────────────────────────
+  create-release:
+    name: Create GitHub Release
+    # FIX: Matching the actual job names defined above
+    needs: [windows]
+    # needs: [android, windows, linux, macos]
+    runs-on: ubuntu-latest
+    steps:
+      # Download all artifacts using a pattern
+      # merge-multiple: true puts all files in the root folder, no subfolders
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: app-*
+          merge-multiple: true
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        # app-release.apk
+        # what-is-linux.tar.gz
+        # what-is-macos.zip
+        with:
+          files: |
+            what-is-windows.zip
+          body: |
+            New release for ${{ github.ref_name }}!
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

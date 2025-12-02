@@ -84,6 +84,33 @@ Access the **Settings** menu by clicking the gear icon in the top-right corner o
 *   [Window Manager](https://pub.dev/packages/window_manager) - Desktop Window Control
 *   [Hotkey Manager](https://pub.dev/packages/hotkey_manager) - Global Shortcuts
 
+## 🖥️ Supported Platforms & AI
+
+*   **Platform**: Currently, **What is** is exclusively available for **Windows**.
+*   **AI Provider**: The application is powered by **Google AI (Gemini)**.
+
+## 🚀 Roadmap (Coming Soon)
+
+*   [ ] macOS and Linux support.
+*   [ ] Support for additional AI providers (OpenAI, Claude, DeepSeek, etc.).
+*   [ ] Chat history and session management.
+*   [ ] Voice input support.
+*   [ ] Plugin system for extended capabilities.
+
+## 🤝 Contributing
+
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
+
+## 📝 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
 ---
 
 <div align="center">

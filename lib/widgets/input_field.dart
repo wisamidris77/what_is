@@ -19,16 +19,48 @@ class InputField extends StatefulWidget {
   });
 
   @override
-  State<InputField> createState() => _InputFieldState();
+  State<InputField> createState() => InputFieldState();
 }
 
-class _InputFieldState extends State<InputField> {
+class InputFieldState extends State<InputField> {
   final _focusNode = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_handleFocusChange);
+    // Auto-focus and select all on init if enabled
+    if (widget.enabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+    }
+  }
+
+  @override
   void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (_focusNode.hasFocus && widget.controller.text.isNotEmpty) {
+      widget.controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.controller.text.length,
+      );
+    }
+  }
+
+  void focusAndSelectAll() {
+    _focusNode.requestFocus();
+    if (widget.controller.text.isNotEmpty) {
+      widget.controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.controller.text.length,
+      );
+    }
   }
 
   void requestFocus() {

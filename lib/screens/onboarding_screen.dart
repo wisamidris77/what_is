@@ -19,10 +19,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _validationError;
   
   String _selectedProvider = 'gemini';
-  String _selectedLanguage = 'Arabic';
+  String _selectedLanguage = 'English';
+  String _selectedTranslateLanguage = 'English';
   ResponseStyle _selectedStyle = ResponseStyle.normal;
 
   final List<String> _availableLanguages = [
+    'English',
     'Arabic',
     'Spanish',
     'French',
@@ -43,7 +45,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _validateAndContinue() async {
-    if (_currentStep == 0) {
+    // Step 0: Provider (No validation needed)
+    
+    // Step 1: API Key
+    if (_currentStep == 1) {
       final apiKey = _apiKeyController.text.trim();
       if (apiKey.isEmpty) {
         setState(() {
@@ -74,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await AIService.instance.initializeProvider(apiKey, providerType: _selectedProvider);
     }
 
-    if (_currentStep < 3) {
+    if (_currentStep < 4) {
       setState(() {
         _currentStep++;
       });
@@ -91,6 +96,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _completeOnboarding() async {
     await StorageService.instance.setProviderType(_selectedProvider);
     await StorageService.instance.setTargetLanguage(_selectedLanguage);
+    await StorageService.instance.setTranslateTargetLanguage(_selectedTranslateLanguage);
     await StorageService.instance.setResponseStyle(_selectedStyle.name);
     await StorageService.instance.setOnboardingComplete(true);
 
@@ -136,7 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const Spacer(),
                   Text(
-                    'Step ${_currentStep + 1} of 4',
+                    'Step ${_currentStep + 1} of 5',
                     style: TextStyle(
                       fontSize: 14,
                       color: isDark ? Colors.white60 : Colors.black54,
@@ -151,9 +157,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _buildApiKeyStep(isDark),
                   _buildProviderStep(isDark),
+                  _buildApiKeyStep(isDark),
                   _buildLanguageStep(isDark),
+                  _buildTranslateLanguageStep(isDark),
                   _buildStyleStep(isDark),
                 ],
               ),
@@ -188,7 +195,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ElevatedButton(
                     onPressed: _isValidating ? null : _validateAndContinue,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? Colors.white : Colors.black87,
+                      backgroundColor: isDark ? Colors.white : Colors.black,
                       foregroundColor: isDark ? Colors.black : Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 32,
@@ -199,98 +206,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                     child: _isValidating
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: isDark ? Colors.black : Colors.white,
                             ),
                           )
-                        : Text(_currentStep == 3 ? 'Get Started' : 'Continue'),
+                        : Text(_currentStep == 4 ? 'Get Started' : 'Continue'),
                   ),
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildApiKeyStep(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 40),
-          Text(
-            'API Key Setup',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Enter your Gemini API key to get started. You can get one from Google AI Studio.',
-            style: TextStyle(
-              fontSize: 15,
-              height: 1.5,
-              color: isDark ? Colors.white60 : Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 40),
-          TextField(
-            controller: _apiKeyController,
-            obscureText: _obscureApiKey,
-            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-            decoration: InputDecoration(
-              labelText: 'Gemini API Key',
-              hintText: 'Enter your API key',
-              hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureApiKey ? Icons.visibility : Icons.visibility_off,
-                  color: isDark ? Colors.white54 : Colors.black38,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _obscureApiKey = !_obscureApiKey;
-                  });
-                },
-              ),
-            ),
-          ),
-          if (_validationError != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error, color: Colors.red, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _validationError!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -351,7 +281,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? (isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.2))
+                ? (isDark ? Colors.white : Colors.black)
                 : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.06)),
             width: 2,
           ),
@@ -400,6 +330,89 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  Widget _buildApiKeyStep(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 40),
+          Text(
+            'API Key Setup',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Enter your API key to get started.',
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.5,
+              color: isDark ? Colors.white60 : Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 40),
+          TextField(
+            controller: _apiKeyController,
+            obscureText: _obscureApiKey,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              labelText: 'API Key',
+              hintText: 'Enter your API key',
+              hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureApiKey ? Icons.visibility : Icons.visibility_off,
+                  color: isDark ? Colors.white54 : Colors.black38,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureApiKey = !_obscureApiKey;
+                  });
+                },
+              ),
+            ),
+            cursorColor: isDark ? Colors.white : Colors.black,
+          ),
+          if (_validationError != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.red, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _validationError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildLanguageStep(bool isDark) {
     return Padding(
       padding: const EdgeInsets.all(32),
@@ -408,7 +421,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           const SizedBox(height: 40),
           Text(
-            'Translation Language',
+            'AI Response Language',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Choose the language you want the AI to respond in.',
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.5,
+              color: isDark ? Colors.white60 : Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 40),
+          DropdownButtonFormField<String>(
+            value: _selectedLanguage,
+            dropdownColor: isDark ? const Color(0xFF3A3A3A) : Colors.white,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 16),
+            decoration: InputDecoration(
+              labelText: 'Target Language',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
+              ),
+            ),
+            items: _availableLanguages.map((language) {
+              return DropdownMenuItem(
+                value: language,
+                child: Text(language),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedLanguage = value;
+                });
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTranslateLanguageStep(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 40),
+          Text(
+            'Translation Target Language',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -426,13 +498,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 40),
           DropdownButtonFormField<String>(
-            value: _selectedLanguage,
+            value: _selectedTranslateLanguage,
             dropdownColor: isDark ? const Color(0xFF3A3A3A) : Colors.white,
             style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 16),
             decoration: InputDecoration(
-              labelText: 'Target Language',
+              labelText: 'Translate Language',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
               ),
             ),
             items: _availableLanguages.map((language) {
@@ -444,7 +521,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             onChanged: (value) {
               if (value != null) {
                 setState(() {
-                  _selectedLanguage = value;
+                  _selectedTranslateLanguage = value;
                 });
               }
             },
@@ -513,7 +590,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? (isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.2))
+                ? (isDark ? Colors.white : Colors.black)
                 : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.06)),
             width: 2,
           ),

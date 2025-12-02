@@ -28,11 +28,19 @@ class StorageService {
   }
 
   String getTargetLanguage() {
-    return _prefs.getString('target_language') ?? 'Arabic';
+    return _prefs.getString('target_language') ?? 'English';
   }
 
   Future<void> setTargetLanguage(String language) async {
     await _prefs.setString('target_language', language);
+  }
+
+  String getTranslateTargetLanguage() {
+    return _prefs.getString('translate_target_language') ?? 'English';
+  }
+
+  Future<void> setTranslateTargetLanguage(String language) async {
+    await _prefs.setString('translate_target_language', language);
   }
 
   bool isDarkMode() {
@@ -88,5 +96,15 @@ class StorageService {
 
   Future<void> setOnboardingComplete(bool complete) async {
     await _prefs.setBool('onboarding_complete', complete);
+  }
+  // Hotkey Management
+  Map<String, dynamic>? getHotkeyConfig(String actionId) {
+    final jsonString = _prefs.getString('hotkey_$actionId');
+    if (jsonString == null) return null;
+    return jsonDecode(jsonString) as Map<String, dynamic>;
+  }
+
+  Future<void> setHotkeyConfig(String actionId, Map<String, dynamic> config) async {
+    await _prefs.setString('hotkey_$actionId', jsonEncode(config));
   }
 }

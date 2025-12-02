@@ -11,7 +11,7 @@ class GeminiProvider implements AIProvider {
   @override
   Future<void> initialize(String apiKey) async {
     _model = GenerativeModel(
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       apiKey: apiKey,
     );
   }
@@ -20,7 +20,7 @@ class GeminiProvider implements AIProvider {
   Future<bool> validateApiKey(String apiKey) async {
     try {
       final testModel = GenerativeModel(
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         apiKey: apiKey,
       );
       final response = await testModel.generateContent([Content.text('test')]);

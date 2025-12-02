@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 import '../models/models.dart';
 import '../services/services.dart';
 import '../widgets/widgets.dart';
+import 'settings_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -13,7 +15,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final _inputController = TextEditingController();
-  final _inputFieldKey = GlobalKey<State<InputField>>();
+  final _inputFieldKey = GlobalKey<InputFieldState>();
   
   AppMode _currentMode = AppMode.code;
   bool _showOverlay = false;
@@ -42,11 +44,23 @@ class _MainScreenState extends State<MainScreen> {
         _resetState();
       }
     });
+    windowManager.show();
+    windowManager.focus();
+    
+    // Ensure focus and selection after window is shown
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _inputFieldKey.currentState?.focusAndSelectAll();
+    });
   }
 
   void _handleClipboardPaste(String text) {
     setState(() {
       _inputController.text = text;
+    });
+    
+    // Ensure focus and selection after paste
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _inputFieldKey.currentState?.focusAndSelectAll();
     });
   }
 
@@ -112,30 +126,34 @@ class _MainScreenState extends State<MainScreen> {
     });
     
     Future.delayed(const Duration(milliseconds: 350), () {
-      (_inputFieldKey.currentState as dynamic)?.requestFocus();
+      _inputFieldKey.currentState?.requestFocus();
     });
   }
 
-  void _handleDone() {
+  Future<void> _handleDone() async {
     _resetState();
+    await windowManager.hide();
   }
 
   void _handleAnotherQuery() {
-    setState(() {
-      _showOverlay = false;
-      _responseText = '';
-      _isStreaming = false;
-      _inputEnabled = true;
-      _inputController.clear();
-    });
-    
-    Future.delayed(const Duration(milliseconds: 350), () {
-      (_inputFieldKey.currentState as dynamic)?.requestFocus();
-    });
+    _resetState();
+  }
+
+  Future<void> _hideApp() async {
+    await windowManager.hide();
+  }
+
+  Future<void> _openSettings() async {
+    await showDialog(
+      context: context,
+      builder: (context) => const SettingsScreen(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): _handleDone,
@@ -147,13 +165,74 @@ class _MainScreenState extends State<MainScreen> {
             children: [
               Column(
                 children: [
-                  TabSelector(
-                    currentMode: _currentMode,
-                    onModeChanged: (mode) {
-                      setState(() {
-                        _currentMode = mode;
-                      });
-                    },
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: AppMode.values.map((mode) {
+                                final isSelected = mode == _currentMode;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          _currentMode = mode;
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 200),
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? (isDark ? Colors.white.withOpacity(0.15) : Colors.black.withOpacity(0.08))
+                                              : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isSelected
+                                                ? (isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.2))
+                                                : Colors.transparent,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          mode.displayName,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                            color: isSelected
+                                                ? (isDark ? Colors.white : Colors.black87)
+                                                : (isDark ? Colors.white60 : Colors.black54),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.visibility_off_outlined),
+                          onPressed: _hideApp,
+                          tooltip: 'Hide',
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.settings_outlined),
+                          onPressed: _openSettings,
+                          tooltip: 'Settings',
+                        ),
+                      ],
+                    ),
                   ),
                   const Spacer(),
                   InputField(
@@ -163,6 +242,33 @@ class _MainScreenState extends State<MainScreen> {
                     onSubmit: _handleSubmit,
                     onReset: _resetState,
                     enabled: _inputEnabled,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: _handleSubmit,
+                        icon: const Icon(Icons.search, size: 22),
+                        label: const Text(
+                          'What is?',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? Colors.white : Colors.black,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

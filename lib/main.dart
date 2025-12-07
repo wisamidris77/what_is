@@ -1,48 +1,23 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:hotkey_manager/hotkey_manager.dart';
+import 'package:window_manager/window_manager.dart';
+import 'package:system_tray/system_tray.dart';
 import 'app.dart';
 import 'services/services.dart';
 import 'screens/screens.dart';
 
-// Desktop-only imports - conditionally used
-import 'package:hotkey_manager/hotkey_manager.dart' if (dart.library.html) '';
-import 'package:window_manager/window_manager.dart' if (dart.library.html) '';
-import 'package:system_tray/system_tray.dart' if (dart.library.html) '';
-
 final navigatorKey = GlobalKey<NavigatorState>();
-
-// Desktop-only globals - initialized conditionally
-SystemTray? _systemTray;
-Menu? _menu;
+final systemTray = SystemTray();
+final menu = Menu();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  await hotKeyManager.unregisterAll();
+
   await StorageService.instance.initialize();
 
-  // Platform-specific initialization
-  if (PlatformService.instance.isDesktop) {
-    await _initializeDesktop();
-  }
-
-  final apiKey = await StorageService.instance.getApiKey();
-  if (apiKey != null && apiKey.isNotEmpty) {
-    try {
-      final provider = StorageService.instance.getProviderType();
-      await AIService.instance.initializeProvider(apiKey, providerType: provider);
-    } catch (e) {
-      debugPrint('Failed to initialize AI service: $e');
-    }
-  }
-
-  final isOnboardingComplete = StorageService.instance.isOnboardingComplete();
-  
-  runApp(WhatIsApp(showOnboarding: !isOnboardingComplete));
-}
-
-Future<void> _initializeDesktop() async {
-  await hotKeyManager.unregisterAll();
   await windowManager.ensureInitialized();
 
   double height = 900;
@@ -68,13 +43,24 @@ Future<void> _initializeDesktop() async {
   // Add window listener
   windowManager.addListener(TrayWindowListener());
 
+  final apiKey = await StorageService.instance.getApiKey();
+  if (apiKey != null && apiKey.isNotEmpty) {
+    try {
+      final provider = StorageService.instance.getProviderType();
+      await AIService.instance.initializeProvider(apiKey, providerType: provider);
+    } catch (e) {
+      debugPrint('Failed to initialize AI service: $e');
+    }
+  }
+
   await HotkeyService.instance.registerAllHotkeys();
+
+  final isOnboardingComplete = StorageService.instance.isOnboardingComplete();
+  
+  runApp(WhatIsApp(showOnboarding: !isOnboardingComplete));
 }
 
 Future<void> _initializeSystemTray() async {
-  _systemTray = SystemTray();
-  _menu = Menu();
-  
   String iconPath = r'c:\Users\wisam\Desktop\what_is\windows\runner\resources\app_icon.ico';
   final appDir = File(Platform.resolvedExecutable).parent;
   final neighborPath = '${appDir.path}\\app_icon.ico';
@@ -83,7 +69,7 @@ Future<void> _initializeSystemTray() async {
     iconPath = neighborPath;
   }
 
-  await _systemTray!.initSystemTray(
+  await systemTray.initSystemTray(
     title: 'What is',
     iconPath: iconPath,
     toolTip: 'What is - AI Assistant',
@@ -91,7 +77,7 @@ Future<void> _initializeSystemTray() async {
 
   await updateSystemTrayMenu(false);
 
-  _systemTray!.registerSystemTrayEventHandler((eventName) {
+  systemTray.registerSystemTrayEventHandler((eventName) {
     if (eventName == kSystemTrayEventClick) {
       windowManager.show();
       windowManager.focus();
@@ -100,9 +86,7 @@ Future<void> _initializeSystemTray() async {
 }
 
 Future<void> updateSystemTrayMenu(bool isVisible) async {
-  if (_menu == null || _systemTray == null) return;
-  
-  await _menu!.buildFrom([
+  await menu.buildFrom([
     MenuItemLabel(
       label: isVisible ? 'Hide' : 'Show',
       onClicked: (menuItem) async {
@@ -135,7 +119,7 @@ Future<void> updateSystemTrayMenu(bool isVisible) async {
     ),
   ]);
 
-  await _systemTray!.setContextMenu(_menu!);
+  await systemTray.setContextMenu(menu);
 }
 
 Future<void> _showSettingsDialog() async {
@@ -156,6 +140,11 @@ class TrayWindowListener extends WindowListener {
 
   @override
   void onWindowBlur() {
+    // Optional: You might want to keep it as 'Hide' if it's just blurred but still visible.
+    // But usually we track visibility. 
+    // Since we don't have a direct visibility callback, we assume focus implies visibility.
+    // We can check isVisible() but that's async.
+    // For now, let's leave blur alone or check visibility.
     _checkVisibility();
   }
 

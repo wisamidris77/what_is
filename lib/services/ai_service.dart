@@ -1,7 +1,6 @@
 import '../models/models.dart';
 import 'ai_provider.dart';
 import 'gemini_provider.dart';
-import 'openai_provider.dart';
 
 class AIService {
   static final AIService instance = AIService._internal();
@@ -22,9 +21,6 @@ class AIService {
       case 'gemini':
         _currentProvider = GeminiProvider();
         break;
-      case 'openai':
-        _currentProvider = OpenAIProvider();
-        break;
       default:
         throw Exception('Unsupported provider: $providerType');
     }
@@ -37,9 +33,6 @@ class AIService {
     switch (providerType.toLowerCase()) {
       case 'gemini':
         provider = GeminiProvider();
-        break;
-      case 'openai':
-        provider = OpenAIProvider();
         break;
       default:
         return false;

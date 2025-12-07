@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/models.dart';
-import '../services/services.dart';
 
 class InputField extends StatefulWidget {
   final TextEditingController controller;
@@ -71,58 +70,7 @@ class InputFieldState extends State<InputField> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isDesktop = PlatformService.instance.isDesktop;
     
-    Widget textField = TextField(
-      controller: widget.controller,
-      focusNode: _focusNode,
-      enabled: widget.enabled,
-      maxLines: 8,
-      style: TextStyle(
-        fontSize: 15,
-        color: isDark ? Colors.white : Colors.black87,
-        height: 1.5,
-      ),
-      decoration: InputDecoration(
-        hintText: widget.currentMode.placeholder,
-        hintStyle: TextStyle(
-          color: isDark ? Colors.white38 : Colors.black38,
-        ),
-        border: InputBorder.none,
-        contentPadding: const EdgeInsets.all(20),
-        // Only show keyboard shortcut hints on desktop
-        suffixIcon: widget.enabled && isDesktop
-            ? Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Ctrl+Enter to submit',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.white30 : Colors.black26,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : null,
-      ),
-    );
-
-    // Only wrap with keyboard shortcuts on desktop
-    if (isDesktop) {
-      textField = CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.enter, control: true): widget.onSubmit,
-          const SingleActivator(LogicalKeyboardKey.keyN, control: true): widget.onReset,
-        },
-        child: textField,
-      );
-    }
-
     return Container(
       margin: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -136,7 +84,49 @@ class InputFieldState extends State<InputField> {
           ),
         ],
       ),
-      child: textField,
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.enter, control: true): widget.onSubmit,
+          const SingleActivator(LogicalKeyboardKey.keyN, control: true): widget.onReset,
+        },
+        child: TextField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          enabled: widget.enabled,
+          maxLines: 8,
+          style: TextStyle(
+            fontSize: 15,
+            color: isDark ? Colors.white : Colors.black87,
+            height: 1.5,
+          ),
+          decoration: InputDecoration(
+            hintText: widget.currentMode.placeholder,
+            hintStyle: TextStyle(
+              color: isDark ? Colors.white38 : Colors.black38,
+            ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.all(20),
+            suffixIcon: widget.enabled
+                ? Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Ctrl+Enter to submit',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white30 : Colors.black26,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : null,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hotkey_manager/hotkey_manager.dart';
 import '../models/models.dart';
 import '../services/services.dart';
 
@@ -22,7 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isDarkMode = false;
   ResponseStyle _selectedStyle = ResponseStyle.normal;
 
-  // Hotkey Configs
+  // Hotkey Configs - only used on desktop
   final Map<String, Map<String, dynamic>> _hotkeyConfigs = {};
 
   final List<String> _availableLanguages = [
@@ -63,11 +62,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       orElse: () => ResponseStyle.normal,
     );
 
-    // Load Hotkeys
-    _loadHotkeyConfig('code', KeyCode.keyC);
-    _loadHotkeyConfig('translate', KeyCode.keyT);
-    _loadHotkeyConfig('explain', KeyCode.keyE);
-    _loadHotkeyConfig('paste', KeyCode.keyV);
+    // Load Hotkeys only on desktop
+    if (PlatformService.instance.isDesktop) {
+      _loadHotkeyConfigs();
+    }
 
     setState(() {
       if (apiKey != null) {
@@ -81,13 +79,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  void _loadHotkeyConfig(String actionId, KeyCode defaultKey) {
+  void _loadHotkeyConfigs() {
+    _loadHotkeyConfig('code', 'keyC');
+    _loadHotkeyConfig('translate', 'keyT');
+    _loadHotkeyConfig('explain', 'keyE');
+    _loadHotkeyConfig('paste', 'keyV');
+  }
+
+  void _loadHotkeyConfig(String actionId, String defaultKey) {
     final config = StorageService.instance.getHotkeyConfig(actionId);
     if (config != null) {
       _hotkeyConfigs[actionId] = config;
     } else {
       _hotkeyConfigs[actionId] = {
-        'keyCode': defaultKey.name,
+        'keyCode': defaultKey,
         'modifiers': ['control', 'alt'],
         'enabled': true,
       };
@@ -132,11 +137,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await StorageService.instance.setDarkMode(_isDarkMode);
     await StorageService.instance.setResponseStyle(_selectedStyle.name);
 
-    // Save Hotkeys
-    for (final entry in _hotkeyConfigs.entries) {
-      await StorageService.instance.setHotkeyConfig(entry.key, entry.value);
+    // Save Hotkeys only on desktop
+    if (PlatformService.instance.isDesktop) {
+      for (final entry in _hotkeyConfigs.entries) {
+        await StorageService.instance.setHotkeyConfig(entry.key, entry.value);
+      }
+      await HotkeyService.instance.registerAllHotkeys();
     }
-    await HotkeyService.instance.registerAllHotkeys();
 
     if (mounted) {
       Navigator.of(context).pop(true);
@@ -146,6 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = PlatformService.instance.isDesktop;
     
     return Dialog(
       insetPadding: EdgeInsets.zero,
@@ -176,6 +184,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader('AI Provider', isDark),
               const SizedBox(height: 16),
               _buildProviderCard('gemini', 'Google Gemini', 'Fast and powerful AI responses', Icons.auto_awesome, isDark),
+              const SizedBox(height: 12),
+              _buildProviderCard('openai', 'OpenAI', 'GPT-4o-mini powered responses', Icons.psychology, isDark),
               
               const SizedBox(height: 32),
               _buildSectionHeader('AI Response Language', isDark),
@@ -207,13 +217,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               )),
 
-              const SizedBox(height: 32),
-              _buildSectionHeader('Hotkeys', isDark),
-              const SizedBox(height: 16),
-              _buildHotkeyTile('Code Mode', 'code', isDark),
-              _buildHotkeyTile('Translate Mode', 'translate', isDark),
-              _buildHotkeyTile('Explain Mode', 'explain', isDark),
-              _buildHotkeyTile('Paste from Clipboard', 'paste', isDark),
+              // Only show Hotkeys section on desktop
+              if (isDesktop) ...[
+                const SizedBox(height: 32),
+                _buildSectionHeader('Hotkeys', isDark),
+                const SizedBox(height: 16),
+                _buildHotkeyTile('Code Mode', 'code', isDark),
+                _buildHotkeyTile('Translate Mode', 'translate', isDark),
+                _buildHotkeyTile('Explain Mode', 'explain', isDark),
+                _buildHotkeyTile('Paste from Clipboard', 'paste', isDark),
+              ],
               
               const SizedBox(height: 32),
               _buildSectionHeader('API Key', isDark),
@@ -355,12 +368,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String currentKeyName = config['keyCode'] ?? 'keyC';
     List<String> currentModifiers = (config['modifiers'] as List<dynamic>?)?.cast<String>() ?? ['control', 'alt'];
     
-    KeyCode? newKey = KeyCode.values.firstWhere((k) => k.name == currentKeyName, orElse: () => KeyCode.keyC);
+    String newKeyName = currentKeyName;
     
     bool hasControl = currentModifiers.contains('control');
     bool hasAlt = currentModifiers.contains('alt');
     bool hasShift = currentModifiers.contains('shift');
     bool hasMeta = currentModifiers.contains('meta');
+
+    final availableKeys = [
+      'keyA', 'keyB', 'keyC', 'keyD', 'keyE', 'keyF', 'keyG', 'keyH', 'keyI', 'keyJ',
+      'keyK', 'keyL', 'keyM', 'keyN', 'keyO', 'keyP', 'keyQ', 'keyR', 'keyS', 'keyT',
+      'keyU', 'keyV', 'keyW', 'keyX', 'keyY', 'keyZ',
+      'digit0', 'digit1', 'digit2', 'digit3', 'digit4', 'digit5', 'digit6', 'digit7', 'digit8', 'digit9',
+    ];
 
     await showDialog(
       context: context,
@@ -405,8 +425,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    DropdownButtonFormField<KeyCode>(
-                      value: newKey,
+                    DropdownButtonFormField<String>(
+                      value: newKeyName,
                       dropdownColor: isDark ? const Color(0xFF3A3A3A) : Colors.white,
                       style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                       decoration: InputDecoration(
@@ -420,14 +440,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
                         ),
                       ),
-                      items: KeyCode.values
-                          .where((k) => k.name.startsWith('key') || k.name.startsWith('digit'))
+                      items: availableKeys
                           .map((k) => DropdownMenuItem(
                                 value: k,
-                                child: Text(k.name.replaceAll('key', '').replaceAll('digit', '').toUpperCase()),
+                                child: Text(k.replaceAll('key', '').replaceAll('digit', '').toUpperCase()),
                               ))
                           .toList(),
-                      onChanged: (val) => setStateDialog(() => newKey = val),
+                      onChanged: (val) => setStateDialog(() => newKeyName = val ?? newKeyName),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -439,7 +458,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
-                          onPressed: newKey != null ? () {
+                          onPressed: () {
                              final newModifiers = <String>[];
                              if (hasControl) newModifiers.add('control');
                              if (hasAlt) newModifiers.add('alt');
@@ -449,12 +468,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                              setState(() {
                                _hotkeyConfigs[actionId] = {
                                  ...config,
-                                 'keyCode': newKey!.name,
+                                 'keyCode': newKeyName,
                                  'modifiers': newModifiers,
                                };
                              });
                              Navigator.pop(context);
-                          } : null,
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isDark ? Colors.white : Colors.black,
                             foregroundColor: isDark ? Colors.black : Colors.white,

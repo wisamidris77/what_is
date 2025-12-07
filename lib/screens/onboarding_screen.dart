@@ -257,6 +257,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Icons.auto_awesome,
             isDark,
           ),
+          const SizedBox(height: 12),
+          _buildProviderCard(
+            'openai',
+            'OpenAI',
+            'GPT-4o-mini powered responses',
+            Icons.psychology,
+            isDark,
+          ),
         ],
       ),
    );

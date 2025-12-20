@@ -12,9 +12,13 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   final _apiKeyController = TextEditingController();
+  final _awsAccessKeyController = TextEditingController();
+  final _awsSecretKeyController = TextEditingController();
+  final _awsRegionController = TextEditingController();
   
   int _currentStep = 0;
   bool _obscureApiKey = true;
+  bool _obscureAwsSecret = true;
   bool _isValidating = false;
   String? _validationError;
   
@@ -41,6 +45,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void dispose() {
     _pageController.dispose();
     _apiKeyController.dispose();
+    _awsAccessKeyController.dispose();
+    _awsSecretKeyController.dispose();
+    _awsRegionController.dispose();
     super.dispose();
   }
 
@@ -49,10 +56,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     
     // Step 1: API Key
     if (_currentStep == 1) {
-      final apiKey = _apiKeyController.text.trim();
-      if (apiKey.isEmpty) {
+      String apiKey;
+      if (_selectedProvider == 'bedrock') {
+        apiKey = '${_awsAccessKeyController.text.trim()}:${_awsSecretKeyController.text.trim()}:${_awsRegionController.text.trim()}';
+      } else {
+        apiKey = _apiKeyController.text.trim();
+      }
+
+      if (apiKey.isEmpty || apiKey == '::') {
         setState(() {
-          _validationError = 'Please enter an API key';
+          _validationError = 'Please enter API credentials';
         });
         return;
       }
@@ -70,7 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (!isValid) {
         setState(() {
-          _validationError = 'Invalid API key. Please check and try again.';
+          _validationError = 'Invalid API key or credentials. Please check and try again.';
         });
         return;
       }
@@ -242,7 +255,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Choose your AI provider. More providers coming soon!',
+            'Choose your AI provider.',
             style: TextStyle(
               fontSize: 15,
               height: 1.5,
@@ -250,24 +263,56 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 40),
-          _buildProviderCard(
-            'gemini',
-            'Google Gemini',
-            'Fast and powerful AI responses',
-            Icons.auto_awesome,
-            isDark,
-          ),
-          const SizedBox(height: 12),
-          _buildProviderCard(
-            'openai',
-            'OpenAI',
-            'GPT-4o-mini powered responses',
-            Icons.psychology,
-            isDark,
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildProviderCard(
+                    'gemini',
+                    'Google Gemini',
+                    'Fast and powerful AI responses',
+                    Icons.auto_awesome,
+                    isDark,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildProviderCard(
+                    'openai',
+                    'OpenAI',
+                    'GPT-4o-mini powered responses',
+                    Icons.psychology,
+                    isDark,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildProviderCard(
+                    'deepseek',
+                    'DeepSeek',
+                    'DeepSeek-Chat model',
+                    Icons.code,
+                    isDark,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildProviderCard(
+                    'claude',
+                    'Claude (Anthropic)',
+                    'Claude 3.5 Sonnet',
+                    Icons.chat_bubble_outline,
+                    isDark,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildProviderCard(
+                    'bedrock',
+                    'AWS Bedrock',
+                    'Claude via Bedrock',
+                    Icons.cloud,
+                    isDark,
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-   );
+    );
   }
 
   Widget _buildProviderCard(String value, String title, String description, IconData icon, bool isDark) {
@@ -355,7 +400,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Enter your API key to get started.',
+            _selectedProvider == 'bedrock' 
+                ? 'Enter your AWS credentials.'
+                : 'Enter your API key to get started.',
             style: TextStyle(
               fontSize: 15,
               height: 1.5,
@@ -363,36 +410,56 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 40),
-          TextField(
-            controller: _apiKeyController,
-            obscureText: _obscureApiKey,
-            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-            decoration: InputDecoration(
-              labelText: 'API Key',
-              hintText: 'Enter your API key',
-              hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
-              ),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureApiKey ? Icons.visibility : Icons.visibility_off,
-                  color: isDark ? Colors.white54 : Colors.black38,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _obscureApiKey = !_obscureApiKey;
-                  });
-                },
-              ),
+          
+          if (_selectedProvider == 'bedrock') ...[
+             TextField(
+              controller: _awsAccessKeyController,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              decoration: _buildInputDecoration('Access Key ID', isDark),
+              cursorColor: isDark ? Colors.white : Colors.black,
             ),
-            cursorColor: isDark ? Colors.white : Colors.black,
-          ),
+            const SizedBox(height: 12),
+             TextField(
+              controller: _awsSecretKeyController,
+              obscureText: _obscureAwsSecret,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              decoration: _buildInputDecoration('Secret Access Key', isDark).copyWith(
+                suffixIcon: IconButton(
+                    icon: Icon(_obscureAwsSecret ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () => setState(() => _obscureAwsSecret = !_obscureAwsSecret),
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+              ),
+              cursorColor: isDark ? Colors.white : Colors.black,
+            ),
+            const SizedBox(height: 12),
+             TextField(
+              controller: _awsRegionController,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              decoration: _buildInputDecoration('Region (e.g. us-east-1)', isDark),
+              cursorColor: isDark ? Colors.white : Colors.black,
+            ),
+          ] else
+            TextField(
+              controller: _apiKeyController,
+              obscureText: _obscureApiKey,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              decoration: _buildInputDecoration('API Key', isDark).copyWith(
+                 suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureApiKey ? Icons.visibility : Icons.visibility_off,
+                    color: isDark ? Colors.white54 : Colors.black38,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureApiKey = !_obscureApiKey;
+                    });
+                  },
+                ),
+              ),
+              cursorColor: isDark ? Colors.white : Colors.black,
+            ),
+            
           if (_validationError != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -417,6 +484,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration(String hint, bool isDark) {
+    return InputDecoration(
+      labelText: hint, 
+      hintText: 'Enter your $hint',
+      hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
       ),
     );
   }

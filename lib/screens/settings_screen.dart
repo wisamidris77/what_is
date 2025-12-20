@@ -11,7 +11,13 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _apiKeyController = TextEditingController();
+  final _awsAccessKeyController = TextEditingController();
+  final _awsSecretKeyController = TextEditingController();
+  final _awsRegionController = TextEditingController();
+  
   bool _obscureApiKey = true;
+  bool _obscureAwsSecret = true;
+  
   bool _isTestingConnection = false;
   String? _connectionStatus;
   
@@ -47,6 +53,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _apiKeyController.dispose();
+    _awsAccessKeyController.dispose();
+    _awsSecretKeyController.dispose();
+    _awsRegionController.dispose();
     super.dispose();
   }
 
@@ -69,7 +78,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() {
       if (apiKey != null) {
-        _apiKeyController.text = apiKey;
+        if (provider == 'bedrock') {
+          final parts = apiKey.split(':');
+          if (parts.length >= 3) {
+            _awsAccessKeyController.text = parts[0];
+            _awsSecretKeyController.text = parts[1];
+            _awsRegionController.text = parts[2];
+          } else {
+             _apiKeyController.text = apiKey; 
+          }
+        } else {
+           _apiKeyController.text = apiKey;
+        }
       }
       _selectedProvider = provider;
       _selectedLanguage = language;
@@ -100,10 +120,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _testConnection() async {
-    final apiKey = _apiKeyController.text.trim();
-    if (apiKey.isEmpty) {
+    String apiKey;
+    if (_selectedProvider == 'bedrock') {
+       apiKey = '${_awsAccessKeyController.text.trim()}:${_awsSecretKeyController.text.trim()}:${_awsRegionController.text.trim()}';
+    } else {
+       apiKey = _apiKeyController.text.trim();
+    }
+
+    if (apiKey.isEmpty || apiKey == '::') {
       setState(() {
-        _connectionStatus = 'Please enter an API key';
+        _connectionStatus = 'Please enter API credentials';
       });
       return;
     }
@@ -124,9 +150,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _saveSettings() async {
-    final apiKey = _apiKeyController.text.trim();
+    String apiKey;
+    if (_selectedProvider == 'bedrock') {
+       apiKey = '${_awsAccessKeyController.text.trim()}:${_awsSecretKeyController.text.trim()}:${_awsRegionController.text.trim()}';
+    } else {
+       apiKey = _apiKeyController.text.trim();
+    }
     
-    if (apiKey.isNotEmpty) {
+    if (apiKey.isNotEmpty && apiKey != '::') {
       await StorageService.instance.saveApiKey(apiKey);
       await AIService.instance.initializeProvider(apiKey, providerType: _selectedProvider);
     }
@@ -186,6 +217,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildProviderCard('gemini', 'Google Gemini', 'Fast and powerful AI responses', Icons.auto_awesome, isDark),
               const SizedBox(height: 12),
               _buildProviderCard('openai', 'OpenAI', 'GPT-4o-mini powered responses', Icons.psychology, isDark),
+              const SizedBox(height: 12),
+              _buildProviderCard('deepseek', 'DeepSeek', 'DeepSeek-Chat model', Icons.code, isDark),
+              const SizedBox(height: 12),
+              _buildProviderCard('claude', 'Claude (Anthropic)', 'Claude 3.5 Sonnet', Icons.chat_bubble_outline, isDark),
+              const SizedBox(height: 12),
+              _buildProviderCard('bedrock', 'AWS Bedrock', 'Claude via Bedrock', Icons.cloud, isDark),
               
               const SizedBox(height: 32),
               _buildSectionHeader('AI Response Language', isDark),
@@ -229,31 +266,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
               
               const SizedBox(height: 32),
-              _buildSectionHeader('API Key', isDark),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _apiKeyController,
-                obscureText: _obscureApiKey,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                decoration: InputDecoration(
-                  hintText: 'Enter API Key',
-                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureApiKey ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _obscureApiKey = !_obscureApiKey),
-                    color: isDark ? Colors.white70 : Colors.black54,
-                  ),
+              
+              if (_selectedProvider == 'bedrock') ...[
+                 _buildSectionHeader('AWS Credentials', isDark),
+                 const SizedBox(height: 12),
+                 TextField(
+                  controller: _awsAccessKeyController,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  decoration: _buildInputDecoration('Access Key ID', isDark),
+                  cursorColor: isDark ? Colors.white : Colors.black,
                 ),
-                cursorColor: isDark ? Colors.white : Colors.black,
-              ),
+                const SizedBox(height: 12),
+                 TextField(
+                  controller: _awsSecretKeyController,
+                  obscureText: _obscureAwsSecret,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  decoration: _buildInputDecoration('Secret Access Key', isDark).copyWith(
+                    suffixIcon: IconButton(
+                        icon: Icon(_obscureAwsSecret ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _obscureAwsSecret = !_obscureAwsSecret),
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                  ),
+                  cursorColor: isDark ? Colors.white : Colors.black,
+                ),
+                const SizedBox(height: 12),
+                 TextField(
+                  controller: _awsRegionController,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  decoration: _buildInputDecoration('Region (e.g. us-east-1)', isDark),
+                  cursorColor: isDark ? Colors.white : Colors.black,
+                ),
+              ] else ...[
+                _buildSectionHeader('API Key', isDark),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _apiKeyController,
+                  obscureText: _obscureApiKey,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  decoration: _buildInputDecoration('Enter API Key', isDark).copyWith(
+                    suffixIcon: IconButton(
+                        icon: Icon(_obscureApiKey ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _obscureApiKey = !_obscureApiKey),
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                  ),
+                  cursorColor: isDark ? Colors.white : Colors.black,
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -585,6 +645,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (isSelected) Icon(Icons.check_circle, color: isDark ? Colors.white : Colors.black87),
           ],
         ),
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration(String hint, bool isDark) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
       ),
     );
   }

@@ -2,6 +2,9 @@ import '../models/models.dart';
 import 'ai_provider.dart';
 import 'gemini_provider.dart';
 import 'openai_provider.dart';
+import 'deepseek_provider.dart';
+import 'claude_provider.dart';
+import 'bedrock_provider.dart';
 
 class AIService {
   static final AIService instance = AIService._internal();
@@ -25,6 +28,15 @@ class AIService {
       case 'openai':
         _currentProvider = OpenAIProvider();
         break;
+      case 'deepseek':
+        _currentProvider = DeepSeekProvider();
+        break;
+      case 'claude':
+        _currentProvider = ClaudeProvider();
+        break;
+      case 'bedrock':
+        _currentProvider = BedrockProvider();
+        break;
       default:
         throw Exception('Unsupported provider: $providerType');
     }
@@ -40,6 +52,15 @@ class AIService {
         break;
       case 'openai':
         provider = OpenAIProvider();
+        break;
+      case 'deepseek':
+        provider = DeepSeekProvider();
+        break;
+      case 'claude':
+        provider = ClaudeProvider();
+        break;
+      case 'bedrock':
+        provider = BedrockProvider();
         break;
       default:
         return false;

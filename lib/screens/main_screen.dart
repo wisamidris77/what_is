@@ -3,11 +3,9 @@ import 'package:flutter/services.dart';
 import '../models/models.dart';
 import '../services/services.dart';
 import '../widgets/widgets.dart';
+import '../main.dart';
 import 'settings_screen.dart';
 import 'learn_it/learn_it_dashboard.dart';
-
-// Conditionally import window_manager only for desktop
-import 'package:window_manager/window_manager.dart' if (dart.library.html) 'dart:ui';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -19,19 +17,19 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final _inputController = TextEditingController();
   final _inputFieldKey = GlobalKey<InputFieldState>();
-  
+
   AppMode _currentMode = AppMode.code;
   bool _showOverlay = false;
   String _responseText = '';
   bool _isStreaming = false;
   bool _inputEnabled = true;
-  
+
   int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Only set up hotkey callbacks on desktop
     if (PlatformService.instance.isDesktop) {
       HotkeyService.instance.onHotkeyPressed = _handleHotkeyPressed;
@@ -53,11 +51,11 @@ class _MainScreenState extends State<MainScreen> {
         _resetState();
       }
     });
-    
+
     if (PlatformService.instance.isDesktop) {
       _showWindow();
     }
-    
+
     // Ensure focus and selection after window is shown
     Future.delayed(const Duration(milliseconds: 100), () {
       _inputFieldKey.currentState?.focusAndSelectAll();
@@ -66,8 +64,8 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _showWindow() async {
     if (PlatformService.instance.isDesktop) {
-      await windowManager.show();
-      await windowManager.focus();
+      await platformHelper.showWindow();
+      await platformHelper.focusWindow();
     }
   }
 
@@ -76,7 +74,7 @@ class _MainScreenState extends State<MainScreen> {
       _currentIndex = 0; // Switch to Assistant view
       _inputController.text = text;
     });
-    
+
     // Ensure focus and selection after paste
     Future.delayed(const Duration(milliseconds: 100), () {
       _inputFieldKey.currentState?.focusAndSelectAll();
@@ -101,7 +99,7 @@ class _MainScreenState extends State<MainScreen> {
         (s) => s.name == responseStyleName,
         orElse: () => ResponseStyle.normal,
       );
-      
+
       final responseStream = AIService.instance.getResponse(
         input,
         _currentMode,
@@ -120,12 +118,7 @@ class _MainScreenState extends State<MainScreen> {
       });
 
       await StorageService.instance.addToHistory(
-        QueryHistory(
-          prompt: input,
-          response: _responseText,
-          mode: _currentMode,
-          timestamp: DateTime.now(),
-        ),
+        QueryHistory(prompt: input, response: _responseText, mode: _currentMode, timestamp: DateTime.now()),
       );
     } catch (e) {
       setState(() {
@@ -143,7 +136,7 @@ class _MainScreenState extends State<MainScreen> {
       _inputEnabled = true;
       _inputController.clear();
     });
-    
+
     Future.delayed(const Duration(milliseconds: 350), () {
       _inputFieldKey.currentState?.requestFocus();
     });
@@ -152,7 +145,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _handleDone() async {
     _resetState();
     if (PlatformService.instance.isDesktop) {
-      await windowManager.hide();
+      await platformHelper.hideWindow();
     }
   }
 
@@ -161,19 +154,11 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _hideApp() async {
-    if (PlatformService.instance.isDesktop) {
-      await windowManager.hide();
-    } else {
-      // On mobile, minimize or go to background
-      SystemNavigator.pop();
-    }
+    await platformHelper.hideWindow();
   }
 
   Future<void> _openSettings() async {
-    await showDialog(
-      context: context,
-      builder: (context) => const SettingsScreen(),
-    );
+    await showDialog(context: context, builder: (context) => const SettingsScreen());
   }
 
   @override
@@ -242,18 +227,10 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                   // Only show hide button on desktop
                   if (isDesktop) ...[
-                    IconButton(
-                      icon: const Icon(Icons.visibility_off_outlined),
-                      onPressed: _hideApp,
-                      tooltip: 'Hide',
-                    ),
+                    IconButton(icon: const Icon(Icons.visibility_off_outlined), onPressed: _hideApp, tooltip: 'Hide'),
                     const SizedBox(width: 8),
                   ],
-                  IconButton(
-                    icon: const Icon(Icons.settings_outlined),
-                    onPressed: _openSettings,
-                    tooltip: 'Settings',
-                  ),
+                  IconButton(icon: const Icon(Icons.settings_outlined), onPressed: _openSettings, tooltip: 'Settings'),
                 ],
               ),
             ),
@@ -276,19 +253,13 @@ class _MainScreenState extends State<MainScreen> {
                   icon: const Icon(Icons.search, size: 22),
                   label: const Text(
                     'What is?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.5),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isDark ? Colors.white : Colors.black,
                     foregroundColor: isDark ? Colors.black : Colors.white,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 ),
               ),
@@ -316,35 +287,24 @@ class _MainScreenState extends State<MainScreen> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.assistant_outlined),
-            selectedIcon: Icon(Icons.assistant, color: Colors.white,),
+            selectedIcon: Icon(Icons.assistant, color: Colors.white),
             label: 'Assistant',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school, color: Colors.white,),
+            selectedIcon: Icon(Icons.school, color: Colors.white),
             label: 'Learn It',
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          assistantView,
-          const LearnItDashboard(),
-        ],
-      ),
+      body: IndexedStack(index: _currentIndex, children: [assistantView, const LearnItDashboard()]),
     );
 
     // Only add keyboard shortcuts on desktop
     if (isDesktop) {
       return CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): _handleDone,
-        },
-        child: Focus(
-          autofocus: true,
-          child: scaffold,
-        ),
+        bindings: {const SingleActivator(LogicalKeyboardKey.escape): _handleDone},
+        child: Focus(autofocus: true, child: scaffold),
       );
     }
 

@@ -9,7 +9,7 @@
   
   <br>
   
-  [![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg?style=flat-square)](https://flutter.dev)
+  [![Platform](https://img.shields.io/badge/Platform-Windows%20|%20Android%20|%20Web-blue.svg?style=flat-square)](https://flutter.dev)
   [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
   [![Built with Flutter](https://img.shields.io/badge/Built%20with-Flutter-02569B.svg?style=flat-square&logo=flutter)](https://flutter.dev)
 </div>
@@ -86,13 +86,13 @@ Access the **Settings** menu by clicking the gear icon in the top-right corner o
 
 ## 🖥️ Supported Platforms & AI
 
-*   **Platform**: Currently, **What is** is exclusively available for **Windows**.
-*   **AI Provider**: The application is powered by **Google AI (Gemini)**.
+*   **Platform**: **What is** is available for **Windows**, **Android**, and **Web**.
+*   **AI Provider**: The application is powered by **Google AI (Gemini)**, **OpenAI**, **Claude (Anthropic)**, **DeepSeek**, and **AWS Bedrock**.
 
 ## 🚀 Roadmap (Coming Soon)
 
 *   [ ] macOS and Linux support.
-*   [ ] Support for additional AI providers (OpenAI, Claude, DeepSeek, etc.).
+*   [x] Support for additional AI providers (OpenAI, Claude, DeepSeek, AWS Bedrock).
 *   [ ] Chat history and session management.
 *   [ ] Voice input support.
 *   [ ] Plugin system for extended capabilities.

@@ -14,53 +14,53 @@ permissions:
   contents: write
 
 jobs:
-  # # ────────────────────────────────
-  # android:
-  #   name: Android APK Build
-  #   runs-on: ubuntu-latest
+  # ────────────────────────────────
+  android:
+    name: Android APK Build
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: subosito/flutter-action@v2
-  #       with:
-  #         flutter-version: "3.38.3"
-  #         channel: "stable"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.3"
+          channel: "stable"
 
-  #     - name: Install dependencies
-  #       run: flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
-  #     - name: Build Android APK
-  #       run: flutter build apk --release --no-tree-shake-icons
+      - name: Build Android APK
+        run: flutter build apk --release --no-tree-shake-icons
 
-  #     - name: Upload APK
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: app-android-apk
-  #         path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
 
-  # # ────────────────────────────────
-  # ios:
-  #   name: iOS Build
-  #   runs-on: macos-latest
+  # ────────────────────────────────
+  ios:
+    name: iOS Build
+    runs-on: macos-latest
 
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: subosito/flutter-action@v2
-  #       with:
-  #         flutter-version: "3.38.3"
-  #         channel: "stable"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.3"
+          channel: "stable"
 
-  #     - name: Install dependencies
-  #       run: flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
-  #     - name: Build iOS
-  #       run: flutter build ios --release --no-codesign --no-tree-shake-icons
+      - name: Build iOS
+        run: flutter build ios --release --no-codesign --no-tree-shake-icons
 
-  #     - name: Upload iOS build
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: app-ios
-  #         path: build/ios/iphoneos/*.app
+      - name: Upload iOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-ios
+          path: build/ios/iphoneos/*.app
 
   # ────────────────────────────────
   windows:
@@ -86,52 +86,52 @@ jobs:
           name: app-windows
           path: build/windows/runner/Release/
 
-  # # ────────────────────────────────
-  # macos:
-  #   name: macOS Build
-  #   runs-on: macos-latest
+  # ────────────────────────────────
+  macos:
+    name: macOS Build
+    runs-on: macos-latest
 
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: subosito/flutter-action@v2
-  #       with:
-  #         flutter-version: "3.38.3"
-  #         channel: "stable"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.3"
+          channel: "stable"
 
-  #     - name: Install dependencies
-  #       run: flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
-  #     - name: Build macOS app
-  #       run: flutter build macos --release --no-tree-shake-icons
+      - name: Build macOS app
+        run: flutter build macos --release --no-tree-shake-icons
 
-  #     - name: Upload macOS build
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: app-macos
-  #         path: build/macos/Build/Products/Release/*.app
+      - name: Upload macOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-macos
+          path: build/macos/Build/Products/Release/*.app
 
-  # # ────────────────────────────────
-  # linux:
-  #   name: Linux Build
-  #   runs-on: ubuntu-latest
+  # ────────────────────────────────
+  linux:
+    name: Linux Build
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: subosito/flutter-action@v2
-  #       with:
-  #         flutter-version: "3.38.3"
-  #         channel: "stable"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.3"
+          channel: "stable"
 
-  #     - name: Install dependencies
-  #       run: |
-  #         sudo apt-get update -y
-  #         sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
-  #         flutter pub get
-  #     - name: Build Linux app
-  #       run: flutter build linux --release --no-tree-shake-icons
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+          flutter pub get
+      - name: Build Linux app
+        run: flutter build linux --release --no-tree-shake-icons
 
-  #     - name: Upload Linux build
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: app-linux
-  #         path: build/linux/x64/release/bundle/
+      - name: Upload Linux build
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-linux
+          path: build/linux/x64/release/bundle/

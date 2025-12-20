@@ -38,6 +38,10 @@ Built with a focus on speed and productivity, it sits quietly in your system tra
 *   **Auto-Focus & Select**: The input field is always ready. Text is auto-selected on entry, making it effortless to overwrite previous queries.
 *   **System Tray Integration**: Minimizes unobtrusively to the background. Right-click for quick controls.
 
+### 🎓 Learn It
+*   **Topic Management**: Organize your learning journey into specific topics.
+*   **AI Discussions**: Have focused, persistent conversations about your topics to deepen understanding.
+
 ### 🧠 Three Specialized Modes
 *   **Code Mode**: Optimized for programming queries, snippets, and debugging help.
 *   **Translate Mode**: Quick, accurate translations to your preferred target language.
@@ -86,7 +90,7 @@ Access the **Settings** menu by clicking the gear icon in the top-right corner o
 
 ## 🖥️ Supported Platforms & AI
 
-*   **Platform**: **What is** is available for **Windows**, **Android**, and **Web**.
+*   **Platform**: **What is** is available for **Windows**, **Android**, and **Web** (Learn It feature not available on Web).
 *   **AI Provider**: The application is powered by **Google AI (Gemini)**, **OpenAI**, **Claude (Anthropic)**, **DeepSeek**, and **AWS Bedrock**.
 
 ## 🚀 Roadmap (Coming Soon)

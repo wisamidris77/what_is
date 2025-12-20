@@ -3,12 +3,6 @@ import '../../models/learn_it/learn_it_models.dart';
 import '../../services/learn_it_service.dart';
 import 'topic_creation_dialog.dart';
 import 'topic_detail_screen.dart';
-
-import 'package:flutter/material.dart';
-import '../../models/learn_it/learn_it_models.dart';
-import '../../services/learn_it_service.dart';
-import 'topic_creation_dialog.dart';
-import 'topic_detail_screen.dart';
 import 'history_view.dart';
 
 class LearnItDashboard extends StatefulWidget {
@@ -67,7 +61,7 @@ class _LearnItDashboardState extends State<LearnItDashboard> with SingleTickerPr
     try {
       return Color(int.parse(hex));
     } catch (_) {
-      return Colors.blue;
+      return Theme.of(context).primaryColor;
     }
   }
 
@@ -83,6 +77,10 @@ class _LearnItDashboardState extends State<LearnItDashboard> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+    final onSurface = theme.colorScheme.onSurface;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -92,9 +90,9 @@ class _LearnItDashboardState extends State<LearnItDashboard> with SingleTickerPr
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
             child: TabBar(
               controller: _tabController,
-              labelColor: Theme.of(context).primaryColor,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Theme.of(context).primaryColor,
+              labelColor: primaryColor,
+              unselectedLabelColor: onSurface.withOpacity(0.5),
+              indicatorColor: primaryColor,
               tabs: const [
                 Tab(text: 'My Topics'),
                 Tab(text: 'History'),
@@ -151,9 +149,9 @@ class _LearnItDashboardState extends State<LearnItDashboard> with SingleTickerPr
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.school_outlined, size: 64, color: Colors.grey),
+                                    Icon(Icons.school_outlined, size: 64, color: onSurface.withOpacity(0.3)),
                                     const SizedBox(height: 16),
-                                    const Text('Start your learning journey!', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                                    Text('Start your learning journey!', style: TextStyle(fontSize: 18, color: onSurface.withOpacity(0.5))),
                                     const SizedBox(height: 16),
                                     ElevatedButton(
                                       onPressed: _showCreateDialog,
@@ -227,6 +225,7 @@ class _LearnItDashboardState extends State<LearnItDashboard> with SingleTickerPr
   }
 
   Widget _buildStatCard(String label, String value, IconData icon) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return Column(
       children: [
         Icon(icon, size: 28),
@@ -237,7 +236,7 @@ class _LearnItDashboardState extends State<LearnItDashboard> with SingleTickerPr
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.5)),
         ),
       ],
     );

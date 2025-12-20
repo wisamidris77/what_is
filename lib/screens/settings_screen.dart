@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../services/services.dart';
+import '../providers/theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,12 +16,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _obscureApiKey = true;
   bool _isTestingConnection = false;
   String? _connectionStatus;
-  
+
   String _selectedProvider = 'gemini';
   String _selectedLanguage = 'English';
   String _selectedTranslateLanguage = 'English';
-  bool _isDarkMode = false;
   ResponseStyle _selectedStyle = ResponseStyle.normal;
+
+  // Theme Settings
+  ThemeMode _selectedThemeMode = ThemeMode.system;
+  Color _selectedPrimaryColor = Colors.black;
 
   // Hotkey Configs - only used on desktop
   final Map<String, Map<String, dynamic>> _hotkeyConfigs = {};
@@ -36,6 +41,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'Japanese',
     'Korean',
     'Chinese',
+  ];
+
+  final List<Color> _accentColors = [
+    Colors.black,
+    Colors.blue,
+    Colors.red,
+    Colors.green,
+    Colors.orange,
+    Colors.purple,
+    Colors.teal,
+    Colors.pink,
+    const Color(0xFF1E1E1E), // Dark Grey
   ];
 
   @override
@@ -55,12 +72,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final provider = StorageService.instance.getProviderType();
     final language = StorageService.instance.getTargetLanguage();
     final translateLanguage = StorageService.instance.getTranslateTargetLanguage();
-    final darkMode = StorageService.instance.isDarkMode();
     final styleValue = StorageService.instance.getResponseStyle();
-    final style = ResponseStyle.values.firstWhere(
-      (s) => s.name == styleValue,
-      orElse: () => ResponseStyle.normal,
-    );
+    final style = ResponseStyle.values.firstWhere((s) => s.name == styleValue, orElse: () => ResponseStyle.normal);
+
+    // Initial Theme values from Provider
+    final themeProvider = context.read<ThemeProvider>();
 
     // Load Hotkeys only on desktop
     if (PlatformService.instance.isDesktop) {
@@ -74,8 +90,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _selectedProvider = provider;
       _selectedLanguage = language;
       _selectedTranslateLanguage = translateLanguage;
-      _isDarkMode = darkMode;
       _selectedStyle = style;
+      _selectedThemeMode = themeProvider.themeMode;
+      _selectedPrimaryColor = themeProvider.primaryColor;
     });
   }
 
@@ -117,25 +134,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() {
       _isTestingConnection = false;
-      _connectionStatus = isValid
-          ? 'Connection successful!'
-          : 'Invalid API key or connection failed';
+      _connectionStatus = isValid ? 'Connection successful!' : 'Invalid API key or connection failed';
     });
   }
 
   Future<void> _saveSettings() async {
     final apiKey = _apiKeyController.text.trim();
-    
+
     if (apiKey.isNotEmpty) {
       await StorageService.instance.saveApiKey(apiKey);
       await AIService.instance.initializeProvider(apiKey, providerType: _selectedProvider);
     }
-    
+
     await StorageService.instance.setProviderType(_selectedProvider);
     await StorageService.instance.setTargetLanguage(_selectedLanguage);
     await StorageService.instance.setTranslateTargetLanguage(_selectedTranslateLanguage);
-    await StorageService.instance.setDarkMode(_isDarkMode);
     await StorageService.instance.setResponseStyle(_selectedStyle.name);
+
+    // Save Theme via Provider
+    final themeProvider = context.read<ThemeProvider>();
+    if (themeProvider.themeMode != _selectedThemeMode) {
+      await themeProvider.setThemeMode(_selectedThemeMode);
+    }
+    if (themeProvider.primaryColor != _selectedPrimaryColor) {
+      await themeProvider.setPrimaryColor(_selectedPrimaryColor);
+    }
 
     // Save Hotkeys only on desktop
     if (PlatformService.instance.isDesktop) {
@@ -152,27 +175,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = theme.colorScheme.primary;
+    final onSurface = theme.colorScheme.onSurface;
     final isDesktop = PlatformService.instance.isDesktop;
-    
+
     return Dialog(
       insetPadding: EdgeInsets.zero,
-      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: const Text('Settings'),
           backgroundColor: Colors.transparent,
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
           actions: [
-            TextButton(
-              onPressed: _saveSettings,
-              child: const Text('Save'),
-            ),
+            TextButton(onPressed: _saveSettings, child: const Text('Save')),
             const SizedBox(width: 16),
           ],
         ),
@@ -181,78 +201,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionHeader('AI Provider', isDark),
+              _buildSectionHeader('Appearance'),
               const SizedBox(height: 16),
-              _buildProviderCard('gemini', 'Google Gemini', 'Fast and powerful AI responses', Icons.auto_awesome, isDark),
-              const SizedBox(height: 12),
-              _buildProviderCard('openai', 'OpenAI', 'GPT-4o-mini powered responses', Icons.psychology, isDark),
-              
-              const SizedBox(height: 32),
-              _buildSectionHeader('AI Response Language', isDark),
-              const SizedBox(height: 8),
-              _buildDropdown(_selectedLanguage, (val) => setState(() => _selectedLanguage = val!), isDark),
-              
-              const SizedBox(height: 32),
-              _buildSectionHeader('Translate Target Language', isDark),
-              const SizedBox(height: 8),
-              _buildDropdown(_selectedTranslateLanguage, (val) => setState(() => _selectedTranslateLanguage = val!), isDark),
-              
-              const SizedBox(height: 32),
-              _buildSectionHeader('Response Style', isDark),
-              const SizedBox(height: 16),
-              ...ResponseStyle.values.map((style) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: RadioListTile<ResponseStyle>(
-                  title: Text(style.displayName),
-                  subtitle: Text(
-                    style.description,
-                    style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black38),
-                  ),
-                  value: style,
-                  groupValue: _selectedStyle,
-                  onChanged: (value) {
-                    if (value != null) setState(() => _selectedStyle = value);
-                  },
-                  activeColor: isDark ? Colors.white : Colors.black,
+              // Theme Mode
+              DropdownButtonFormField<ThemeMode>(
+                value: _selectedThemeMode,
+                dropdownColor: theme.cardColor,
+                decoration: InputDecoration(
+                  labelText: 'Theme Mode',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-              )),
+                items: const [
+                  DropdownMenuItem(value: ThemeMode.system, child: Text('System Default')),
+                  DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                  DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+                ],
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedThemeMode = val);
+                },
+              ),
+              const SizedBox(height: 16),
+              // Accent Color
+              const Text('Primary Color', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _accentColors.map((color) {
+                  final isSelected = _selectedPrimaryColor.value == color.value;
+                  return InkWell(
+                    onTap: () => setState(() => _selectedPrimaryColor = color),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: isSelected ? Border.all(color: onSurface, width: 2) : null,
+                        boxShadow: [
+                          if (isSelected) BoxShadow(color: color.withOpacity(0.4), blurRadius: 8, spreadRadius: 2),
+                        ],
+                      ),
+                      child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 32),
+              _buildSectionHeader('AI Provider'),
+              const SizedBox(height: 16),
+              _buildProviderCard('gemini', 'Google Gemini', 'Fast and powerful AI responses', Icons.auto_awesome),
+              const SizedBox(height: 12),
+              _buildProviderCard('openai', 'OpenAI', 'GPT-4o-mini powered responses', Icons.psychology),
+
+              const SizedBox(height: 32),
+              _buildSectionHeader('AI Response Language'),
+              const SizedBox(height: 8),
+              _buildDropdown(_selectedLanguage, (val) => setState(() => _selectedLanguage = val!)),
+
+              const SizedBox(height: 32),
+              _buildSectionHeader('Translate Target Language'),
+              const SizedBox(height: 8),
+              _buildDropdown(_selectedTranslateLanguage, (val) => setState(() => _selectedTranslateLanguage = val!)),
+
+              const SizedBox(height: 32),
+              _buildSectionHeader('Response Style'),
+              const SizedBox(height: 16),
+              ...ResponseStyle.values.map(
+                (style) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: RadioListTile<ResponseStyle>(
+                    title: Text(style.displayName),
+                    subtitle: Text(
+                      style.description,
+                      style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.6)),
+                    ),
+                    value: style,
+                    groupValue: _selectedStyle,
+                    onChanged: (value) {
+                      if (value != null) setState(() => _selectedStyle = value);
+                    },
+                    activeColor: primaryColor,
+                  ),
+                ),
+              ),
 
               // Only show Hotkeys section on desktop
               if (isDesktop) ...[
                 const SizedBox(height: 32),
-                _buildSectionHeader('Hotkeys', isDark),
+                _buildSectionHeader('Hotkeys'),
                 const SizedBox(height: 16),
-                _buildHotkeyTile('Code Mode', 'code', isDark),
-                _buildHotkeyTile('Translate Mode', 'translate', isDark),
-                _buildHotkeyTile('Explain Mode', 'explain', isDark),
-                _buildHotkeyTile('Paste from Clipboard', 'paste', isDark),
+                _buildHotkeyTile('Code Mode', 'code'),
+                _buildHotkeyTile('Translate Mode', 'translate'),
+                _buildHotkeyTile('Explain Mode', 'explain'),
+                _buildHotkeyTile('Paste from Clipboard', 'paste'),
               ],
-              
+
               const SizedBox(height: 32),
-              _buildSectionHeader('API Key', isDark),
+              _buildSectionHeader('API Key'),
               const SizedBox(height: 8),
               TextField(
                 controller: _apiKeyController,
                 obscureText: _obscureApiKey,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                 decoration: InputDecoration(
                   hintText: 'Enter API Key',
-                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   suffixIcon: IconButton(
                     icon: Icon(_obscureApiKey ? Icons.visibility : Icons.visibility_off),
                     onPressed: () => setState(() => _obscureApiKey = !_obscureApiKey),
-                    color: isDark ? Colors.white70 : Colors.black54,
                   ),
                 ),
-                cursorColor: isDark ? Colors.white : Colors.black,
               ),
               const SizedBox(height: 12),
               Row(
@@ -264,8 +324,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : const Icon(Icons.check_circle, size: 18),
                     label: const Text('Test Connection'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? Colors.white : Colors.black,
-                      foregroundColor: isDark ? Colors.black : Colors.white,
+                      backgroundColor: primaryColor,
+                      foregroundColor: theme.colorScheme.onPrimary,
                     ),
                   ),
                   if (_connectionStatus != null) ...[
@@ -290,69 +350,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildHotkeyTile(String label, String actionId, bool isDark) {
+  Widget _buildHotkeyTile(String label, String actionId) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     final config = _hotkeyConfigs[actionId] ?? {};
     final enabled = config['enabled'] ?? true;
     final modifiers = (config['modifiers'] as List<dynamic>?)?.cast<String>() ?? ['control', 'alt'];
     final keyCode = config['keyCode'] as String? ?? 'keyC';
 
-    final keyDisplay = '${modifiers.map((m) => m.toUpperCase()).join(' + ')} + ${keyCode.replaceAll('key', '').toUpperCase()}';
+    final keyDisplay =
+        '${modifiers.map((m) => m.toUpperCase()).join(' + ')} + ${keyCode.replaceAll('key', '').toUpperCase()}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+          color: onSurface.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+          border: Border.all(color: onSurface.withOpacity(0.1)),
         ),
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-              ),
+              child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
             ),
             Switch(
               value: enabled,
               onChanged: (val) {
                 setState(() {
-                  _hotkeyConfigs[actionId] = {
-                    ...config,
-                    'enabled': val,
-                  };
+                  _hotkeyConfigs[actionId] = {...config, 'enabled': val};
                 });
               },
-              activeColor: isDark ? Colors.white : Colors.black,
             ),
             const SizedBox(width: 12),
             InkWell(
-              onTap: enabled ? () => _showHotkeyEditor(actionId, isDark) : null,
+              onTap: enabled ? () => _showHotkeyEditor(actionId) : null,
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.black : Colors.white,
+                  color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: enabled
-                        ? (isDark ? Colors.white24 : Colors.black26)
-                        : (isDark ? Colors.white10 : Colors.black12),
-                  ),
+                  border: Border.all(color: enabled ? onSurface.withOpacity(0.3) : onSurface.withOpacity(0.1)),
                 ),
                 child: Text(
                   keyDisplay,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: enabled
-                        ? (isDark ? Colors.white : Colors.black87)
-                        : (isDark ? Colors.white38 : Colors.black38),
+                    color: enabled ? onSurface : onSurface.withOpacity(0.4),
                   ),
                 ),
               ),
@@ -363,23 +410,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _showHotkeyEditor(String actionId, bool isDark) async {
+  Future<void> _showHotkeyEditor(String actionId) async {
+    final theme = Theme.of(context);
     final config = _hotkeyConfigs[actionId] ?? {};
     String currentKeyName = config['keyCode'] ?? 'keyC';
     List<String> currentModifiers = (config['modifiers'] as List<dynamic>?)?.cast<String>() ?? ['control', 'alt'];
-    
+
     String newKeyName = currentKeyName;
-    
+
     bool hasControl = currentModifiers.contains('control');
     bool hasAlt = currentModifiers.contains('alt');
     bool hasShift = currentModifiers.contains('shift');
     bool hasMeta = currentModifiers.contains('meta');
 
     final availableKeys = [
-      'keyA', 'keyB', 'keyC', 'keyD', 'keyE', 'keyF', 'keyG', 'keyH', 'keyI', 'keyJ',
-      'keyK', 'keyL', 'keyM', 'keyN', 'keyO', 'keyP', 'keyQ', 'keyR', 'keyS', 'keyT',
-      'keyU', 'keyV', 'keyW', 'keyX', 'keyY', 'keyZ',
-      'digit0', 'digit1', 'digit2', 'digit3', 'digit4', 'digit5', 'digit6', 'digit7', 'digit8', 'digit9',
+      'keyA',
+      'keyB',
+      'keyC',
+      'keyD',
+      'keyE',
+      'keyF',
+      'keyG',
+      'keyH',
+      'keyI',
+      'keyJ',
+      'keyK',
+      'keyL',
+      'keyM',
+      'keyN',
+      'keyO',
+      'keyP',
+      'keyQ',
+      'keyR',
+      'keyS',
+      'keyT',
+      'keyU',
+      'keyV',
+      'keyW',
+      'keyX',
+      'keyY',
+      'keyZ',
+      'digit0',
+      'digit1',
+      'digit2',
+      'digit3',
+      'digit4',
+      'digit5',
+      'digit6',
+      'digit7',
+      'digit8',
+      'digit9',
     ];
 
     await showDialog(
@@ -388,7 +468,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return Dialog(
-              backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              backgroundColor: theme.dialogBackgroundColor,
               child: Container(
                 padding: const EdgeInsets.all(24),
                 constraints: const BoxConstraints(maxWidth: 400),
@@ -396,55 +476,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Edit Hotkey',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black,
-                      ),
-                    ),
+                    const Text('Edit Hotkey', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 24),
-                    Text(
-                      'Modifiers',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
+                    const Text('Modifiers', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _buildModifierChip('Ctrl', hasControl, (val) => setStateDialog(() => hasControl = val), isDark),
-                        _buildModifierChip('Alt', hasAlt, (val) => setStateDialog(() => hasAlt = val), isDark),
-                        _buildModifierChip('Shift', hasShift, (val) => setStateDialog(() => hasShift = val), isDark),
-                        _buildModifierChip('Meta', hasMeta, (val) => setStateDialog(() => hasMeta = val), isDark),
+                        _buildModifierChip('Ctrl', hasControl, (val) => setStateDialog(() => hasControl = val)),
+                        _buildModifierChip('Alt', hasAlt, (val) => setStateDialog(() => hasAlt = val)),
+                        _buildModifierChip('Shift', hasShift, (val) => setStateDialog(() => hasShift = val)),
+                        _buildModifierChip('Meta', hasMeta, (val) => setStateDialog(() => hasMeta = val)),
                       ],
                     ),
                     const SizedBox(height: 24),
                     DropdownButtonFormField<String>(
                       value: newKeyName,
-                      dropdownColor: isDark ? const Color(0xFF3A3A3A) : Colors.white,
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                      dropdownColor: theme.cardColor,
                       decoration: InputDecoration(
                         labelText: 'Key',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       items: availableKeys
-                          .map((k) => DropdownMenuItem(
-                                value: k,
-                                child: Text(k.replaceAll('key', '').replaceAll('digit', '').toUpperCase()),
-                              ))
+                          .map(
+                            (k) => DropdownMenuItem(
+                              value: k,
+                              child: Text(k.replaceAll('key', '').replaceAll('digit', '').toUpperCase()),
+                            ),
+                          )
                           .toList(),
                       onChanged: (val) => setStateDialog(() => newKeyName = val ?? newKeyName),
                     ),
@@ -452,32 +512,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () {
-                             final newModifiers = <String>[];
-                             if (hasControl) newModifiers.add('control');
-                             if (hasAlt) newModifiers.add('alt');
-                             if (hasShift) newModifiers.add('shift');
-                             if (hasMeta) newModifiers.add('meta');
+                            final newModifiers = <String>[];
+                            if (hasControl) newModifiers.add('control');
+                            if (hasAlt) newModifiers.add('alt');
+                            if (hasShift) newModifiers.add('shift');
+                            if (hasMeta) newModifiers.add('meta');
 
-                             setState(() {
-                               _hotkeyConfigs[actionId] = {
-                                 ...config,
-                                 'keyCode': newKeyName,
-                                 'modifiers': newModifiers,
-                               };
-                             });
-                             Navigator.pop(context);
+                            setState(() {
+                              _hotkeyConfigs[actionId] = {...config, 'keyCode': newKeyName, 'modifiers': newModifiers};
+                            });
+                            Navigator.pop(context);
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isDark ? Colors.white : Colors.black,
-                            foregroundColor: isDark ? Colors.black : Colors.white,
-                          ),
                           child: const Text('Save'),
                         ),
                       ],
@@ -492,57 +541,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildModifierChip(String label, bool selected, ValueChanged<bool> onSelected, bool isDark) {
+  Widget _buildModifierChip(String label, bool selected, ValueChanged<bool> onSelected) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+
     return FilterChip(
       label: Text(label),
       selected: selected,
       onSelected: onSelected,
-      checkmarkColor: isDark ? Colors.black : Colors.white,
-      selectedColor: isDark ? Colors.white : Colors.black,
-      backgroundColor: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+      checkmarkColor: theme.colorScheme.onPrimary,
+      selectedColor: primaryColor,
       labelStyle: TextStyle(
-        color: selected
-            ? (isDark ? Colors.black : Colors.white)
-            : (isDark ? Colors.white : Colors.black87),
+        color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
         fontWeight: selected ? FontWeight.bold : FontWeight.normal,
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: selected
-              ? Colors.transparent
-              : (isDark ? Colors.white24 : Colors.black12),
-        ),
-      ),
     );
   }
 
-  Widget _buildSectionHeader(String title, bool isDark) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: isDark ? Colors.white : Colors.black87,
-      ),
-    );
+  Widget _buildSectionHeader(String title) {
+    return Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold));
   }
 
-  Widget _buildDropdown(String value, ValueChanged<String?> onChanged, bool isDark) {
+  Widget _buildDropdown(String value, ValueChanged<String?> onChanged) {
+    final theme = Theme.of(context);
     return DropdownButtonFormField<String>(
       value: value,
-      dropdownColor: isDark ? const Color(0xFF3A3A3A) : Colors.white,
-      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: isDark ? Colors.white : Colors.black),
-        ),
-      ),
+      dropdownColor: theme.cardColor,
+      decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
       items: _availableLanguages.map((language) {
         return DropdownMenuItem(value: language, child: Text(language));
       }).toList(),
@@ -550,39 +575,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildProviderCard(String value, String title, String description, IconData icon, bool isDark) {
+  Widget _buildProviderCard(String value, String title, String description, IconData icon) {
     final isSelected = _selectedProvider == value;
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+    final onSurface = theme.colorScheme.onSurface;
+
     return InkWell(
       onTap: () => setState(() => _selectedProvider = value),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05))
-              : Colors.transparent,
+          color: isSelected ? primaryColor.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? (isDark ? Colors.white : Colors.black)
-                : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.06)),
-            width: 2,
-          ),
+          border: Border.all(color: isSelected ? primaryColor : onSurface.withOpacity(0.1), width: 2),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 28, color: isSelected ? (isDark ? Colors.white : Colors.black87) : (isDark ? Colors.white54 : Colors.black38)),
+            Icon(icon, size: 28, color: isSelected ? primaryColor : onSurface.withOpacity(0.5)),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
-                  Text(description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54)),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(description, style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.6))),
                 ],
               ),
             ),
-            if (isSelected) Icon(Icons.check_circle, color: isDark ? Colors.white : Colors.black87),
+            if (isSelected) Icon(Icons.check_circle, color: primaryColor),
           ],
         ),
       ),

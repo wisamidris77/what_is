@@ -178,7 +178,10 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = theme.colorScheme.primary;
+    final onSurface = theme.colorScheme.onSurface;
     final isDesktop = PlatformService.instance.isDesktop;
 
     Widget assistantView = Stack(
@@ -212,12 +215,12 @@ class _MainScreenState extends State<MainScreen> {
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: isSelected
-                                        ? (isDark ? Colors.white.withOpacity(0.15) : Colors.black.withOpacity(0.08))
+                                        ? onSurface.withOpacity(0.1)
                                         : Colors.transparent,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: isSelected
-                                          ? (isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.2))
+                                          ? onSurface.withOpacity(0.3)
                                           : Colors.transparent,
                                       width: 1.5,
                                     ),
@@ -228,8 +231,8 @@ class _MainScreenState extends State<MainScreen> {
                                       fontSize: 14,
                                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                                       color: isSelected
-                                          ? (isDark ? Colors.white : Colors.black87)
-                                          : (isDark ? Colors.white60 : Colors.black54),
+                                          ? onSurface
+                                          : onSurface.withOpacity(0.6),
                                     ),
                                   ),
                                 ),
@@ -283,8 +286,8 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark ? Colors.white : Colors.black,
-                    foregroundColor: isDark ? Colors.black : Colors.white,
+                    backgroundColor: primaryColor,
+                    foregroundColor: theme.colorScheme.onPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -316,12 +319,12 @@ class _MainScreenState extends State<MainScreen> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.assistant_outlined),
-            selectedIcon: Icon(Icons.assistant, color: Colors.white,),
+            selectedIcon: Icon(Icons.assistant),
             label: 'Assistant',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school, color: Colors.white,),
+            selectedIcon: Icon(Icons.school),
             label: 'Learn It',
           ),
         ],

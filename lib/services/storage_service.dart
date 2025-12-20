@@ -43,12 +43,21 @@ class StorageService {
     await _prefs.setString('translate_target_language', language);
   }
 
-  bool isDarkMode() {
-    return _prefs.getBool('dark_mode') ?? false;
+  // Theme Settings
+  String getThemeMode() {
+    return _prefs.getString('theme_mode') ?? 'system';
   }
 
-  Future<void> setDarkMode(bool isDark) async {
-    await _prefs.setBool('dark_mode', isDark);
+  Future<void> setThemeMode(String mode) async {
+    await _prefs.setString('theme_mode', mode);
+  }
+
+  int getPrimaryColor() {
+    return _prefs.getInt('primary_color') ?? 0xFF000000; // Default Black
+  }
+
+  Future<void> setPrimaryColor(int color) async {
+    await _prefs.setInt('primary_color', color);
   }
 
   List<QueryHistory> getHistory() {

@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'app.dart';
 import 'services/services.dart';
 import 'screens/screens.dart';
+import 'providers/theme_provider.dart';
 
 // Desktop-only imports - conditionally used
 import 'package:hotkey_manager/hotkey_manager.dart' if (dart.library.html) '';
@@ -39,7 +41,14 @@ Future<void> main() async {
 
   final isOnboardingComplete = StorageService.instance.isOnboardingComplete();
   
-  runApp(WhatIsApp(showOnboarding: !isOnboardingComplete));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ],
+      child: WhatIsApp(showOnboarding: !isOnboardingComplete),
+    ),
+  );
 }
 
 Future<void> _initializeDesktop() async {

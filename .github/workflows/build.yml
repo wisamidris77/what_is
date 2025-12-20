@@ -94,7 +94,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev libjsoncpp-dev
       - run: flutter pub get
       - run: flutter build linux --release --no-tree-shake-icons
 
@@ -112,8 +112,7 @@ jobs:
   create-release:
     name: Create GitHub Release
     # FIX: Matching the actual job names defined above
-    needs: [windows]
-    # needs: [android, windows, linux, macos]
+    needs: [android, windows, linux, macos]
     runs-on: ubuntu-latest
     steps:
       # Download all artifacts using a pattern

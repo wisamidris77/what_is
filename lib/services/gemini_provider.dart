@@ -52,6 +52,29 @@ class GeminiProvider implements AIProvider {
     }
   }
 
+  @override
+  Stream<String> generate(String prompt) async* {
+    if (_model == null) {
+      throw Exception('Provider not initialized. Call initialize() first.');
+    }
+
+    try {
+      // Direct raw prompt, no wrapping
+      final response = _model!.generateContentStream([Content.text(prompt)]);
+      
+      await for (final chunk in response) {
+        final text = chunk.text;
+        if (text != null) {
+          yield text;
+        }
+      }
+    } catch (e) {
+      // Log the error as requested
+      print('GeminiProvider Generate Error: $e');
+      yield 'Error: ${e.toString()}';
+    }
+  }
+
   String _wrapPrompt(String userInput, AppMode mode, String? targetLanguage, String? styleModifier) {
     final modifier = styleModifier ?? '';
     switch (mode) {

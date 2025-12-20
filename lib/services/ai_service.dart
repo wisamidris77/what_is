@@ -52,6 +52,10 @@ class AIService {
     return currentProvider.generateResponse(input, mode, targetLanguage, responseStyle: responseStyle);
   }
 
+  Stream<String> generate(String input) {
+    return currentProvider.generate(input);
+  }
+
   bool get isInitialized => _currentProvider != null;
   
   String get providerName => _currentProvider?.providerName ?? 'None';

@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../services/services.dart';
 import '../widgets/widgets.dart';
 import 'settings_screen.dart';
+import 'learn_it/learn_it_dashboard.dart';
 
 // Conditionally import window_manager only for desktop
 import 'package:window_manager/window_manager.dart' if (dart.library.html) 'dart:ui';
@@ -24,6 +25,8 @@ class _MainScreenState extends State<MainScreen> {
   String _responseText = '';
   bool _isStreaming = false;
   bool _inputEnabled = true;
+  
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -44,6 +47,7 @@ class _MainScreenState extends State<MainScreen> {
 
   void _handleHotkeyPressed(AppMode mode) {
     setState(() {
+      _currentIndex = 0; // Switch to Assistant view
       _currentMode = mode;
       if (_showOverlay) {
         _resetState();
@@ -69,6 +73,7 @@ class _MainScreenState extends State<MainScreen> {
 
   void _handleClipboardPaste(String text) {
     setState(() {
+      _currentIndex = 0; // Switch to Assistant view
       _inputController.text = text;
     });
     
@@ -176,128 +181,156 @@ class _MainScreenState extends State<MainScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = PlatformService.instance.isDesktop;
 
-    Widget content = Scaffold(
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: AppMode.values.map((mode) {
-                            final isSelected = mode == _currentMode;
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      _currentMode = mode;
-                                    });
-                                  },
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    decoration: BoxDecoration(
+    Widget assistantView = Stack(
+      children: [
+        Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: AppMode.values.map((mode) {
+                          final isSelected = mode == _currentMode;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _currentMode = mode;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? (isDark ? Colors.white.withOpacity(0.15) : Colors.black.withOpacity(0.08))
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
                                       color: isSelected
-                                          ? (isDark ? Colors.white.withOpacity(0.15) : Colors.black.withOpacity(0.08))
+                                          ? (isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.2))
                                           : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? (isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.2))
-                                            : Colors.transparent,
-                                        width: 1.5,
-                                      ),
+                                      width: 1.5,
                                     ),
-                                    child: Text(
-                                      mode.displayName,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                        color: isSelected
-                                            ? (isDark ? Colors.white : Colors.black87)
-                                            : (isDark ? Colors.white60 : Colors.black54),
-                                      ),
+                                  ),
+                                  child: Text(
+                                    mode.displayName,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                      color: isSelected
+                                          ? (isDark ? Colors.white : Colors.black87)
+                                          : (isDark ? Colors.white60 : Colors.black54),
                                     ),
                                   ),
                                 ),
                               ),
-                            );
-                          }).toList(),
-                        ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
-                    // Only show hide button on desktop
-                    if (isDesktop) ...[
-                      IconButton(
-                        icon: const Icon(Icons.visibility_off_outlined),
-                        onPressed: _hideApp,
-                        tooltip: 'Hide',
-                      ),
-                      const SizedBox(width: 8),
-                    ],
+                  ),
+                  // Only show hide button on desktop
+                  if (isDesktop) ...[
                     IconButton(
-                      icon: const Icon(Icons.settings_outlined),
-                      onPressed: _openSettings,
-                      tooltip: 'Settings',
+                      icon: const Icon(Icons.visibility_off_outlined),
+                      onPressed: _hideApp,
+                      tooltip: 'Hide',
                     ),
+                    const SizedBox(width: 8),
                   ],
-                ),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: _openSettings,
+                    tooltip: 'Settings',
+                  ),
+                ],
               ),
-              const Spacer(),
-              InputField(
-                key: _inputFieldKey,
-                controller: _inputController,
-                currentMode: _currentMode,
-                onSubmit: _handleSubmit,
-                onReset: _resetState,
-                enabled: _inputEnabled,
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: _handleSubmit,
-                    icon: const Icon(Icons.search, size: 22),
-                    label: const Text(
-                      'What is?',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
+            ),
+            const Spacer(),
+            InputField(
+              key: _inputFieldKey,
+              controller: _inputController,
+              currentMode: _currentMode,
+              onSubmit: _handleSubmit,
+              onReset: _resetState,
+              enabled: _inputEnabled,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: _handleSubmit,
+                  icon: const Icon(Icons.search, size: 22),
+                  label: const Text(
+                    'What is?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? Colors.white : Colors.black,
-                      foregroundColor: isDark ? Colors.black : Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? Colors.white : Colors.black,
+                    foregroundColor: isDark ? Colors.black : Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                 ),
               ),
-            ],
+            ),
+          ],
+        ),
+        ResultOverlay(
+          isVisible: _showOverlay,
+          responseText: _responseText,
+          isStreaming: _isStreaming,
+          onDone: _handleDone,
+          onAnotherQuery: _handleAnotherQuery,
+        ),
+      ],
+    );
+
+    Widget scaffold = Scaffold(
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.assistant_outlined),
+            selectedIcon: Icon(Icons.assistant, color: Colors.white,),
+            label: 'Assistant',
           ),
-          ResultOverlay(
-            isVisible: _showOverlay,
-            responseText: _responseText,
-            isStreaming: _isStreaming,
-            onDone: _handleDone,
-            onAnotherQuery: _handleAnotherQuery,
+          NavigationDestination(
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school, color: Colors.white,),
+            label: 'Learn It',
           ),
+        ],
+      ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          assistantView,
+          const LearnItDashboard(),
         ],
       ),
     );
@@ -310,11 +343,11 @@ class _MainScreenState extends State<MainScreen> {
         },
         child: Focus(
           autofocus: true,
-          child: content,
+          child: scaffold,
         ),
       );
     }
 
-    return content;
+    return scaffold;
   }
 }

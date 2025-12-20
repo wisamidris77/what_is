@@ -98,6 +98,15 @@ class _WhatIsAppState extends State<WhatIsApp> {
         checkboxTheme: CheckboxThemeData(
           fillColor: MaterialStateProperty.all(Colors.white),
         ),
+        navigationBarTheme: NavigationBarThemeData(
+          indicatorColor: Colors.white,
+          iconTheme: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const IconThemeData(color: Colors.black);
+            }
+            return const IconThemeData(color: Colors.white70);
+          }),
+        ),
       ),
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: const MainScreen(),

@@ -94,6 +94,59 @@ class OpenAIProvider implements AIProvider {
     }
   }
 
+  @override
+  Stream<String> generate(String prompt) async* {
+     if (_apiKey == null) {
+      throw Exception('Provider not initialized. Call initialize() first.');
+    }
+
+    try {
+      final request = http.Request('POST', Uri.parse(_baseUrl));
+      request.headers.addAll({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_apiKey',
+      });
+      request.body = jsonEncode({
+        'model': _model,
+        'messages': [
+          {'role': 'user', 'content': prompt} // Raw prompt
+        ],
+        'stream': true,
+      });
+
+      final response = await http.Client().send(request);
+
+      if (response.statusCode != 200) {
+        print('OpenAI Generate Error Status: ${response.statusCode}');
+        yield 'Error: API request failed with status ${response.statusCode}';
+        return;
+      }
+
+      await for (final chunk in response.stream.transform(utf8.decoder).transform(const LineSplitter())) {
+        if (chunk.startsWith('data: ') && !chunk.contains('[DONE]')) {
+          try {
+            final jsonStr = chunk.substring(6);
+            if (jsonStr.trim().isEmpty) continue;
+            final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+            final choices = data['choices'] as List?;
+            if (choices != null && choices.isNotEmpty) {
+              final delta = choices[0]['delta'] as Map<String, dynamic>?;
+              final content = delta?['content'] as String?;
+              if (content != null) {
+                yield content;
+              }
+            }
+          } catch (e) {
+            print('OpenAI Parse Error: $e');
+          }
+        }
+      }
+    } catch (e) {
+      print('OpenAI Generate Error: $e');
+      yield 'Error: ${e.toString()}';
+    }
+  }
+
   String _wrapPrompt(String userInput, AppMode mode, String? targetLanguage, String? styleModifier) {
     final modifier = styleModifier ?? '';
     switch (mode) {

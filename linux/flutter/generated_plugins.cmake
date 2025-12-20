@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_secure_storage_linux
   hotkey_manager
   screen_retriever
+  sqlite3_flutter_libs
   system_tray
   window_manager
 )

@@ -20,6 +20,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await StorageService.instance.initialize();
+  await LearnItService.instance.initialize();
 
   // Platform-specific initialization
   if (PlatformService.instance.isDesktop) {
